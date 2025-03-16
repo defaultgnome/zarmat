@@ -13,6 +13,10 @@ pub const Application = struct {
     state: State,
     window: *glfw.Window,
     clear_color: zm.Vec,
+
+    update_callback: ?*const fn (self: *Self, user_data: *anyopaque) void = null,
+    update_user_data: ?*anyopaque = null,
+
     const Self = @This();
 
     const State = struct {
@@ -146,9 +150,14 @@ pub const Application = struct {
         glfw.terminate();
     }
 
+    pub fn onUpdate(self: *Self, callback: *const fn (self: *Self, user_data: *anyopaque) void, user_data: *anyopaque) void {
+        self.update_callback = callback;
+        self.update_user_data = user_data;
+    }
+
     pub fn run(self: *Self) !void {
         const window = self.window;
-        var state = self.state;
+        var state = &self.state;
 
         while (!window.shouldClose()) {
             //---UPDATE
@@ -158,6 +167,11 @@ pub const Application = struct {
                 state.last_frame = current_frame;
             }
             processInput(window);
+            if (self.update_callback) |update| {
+                if (self.update_user_data) |data| {
+                    update(self, data);
+                }
+            }
 
             //---DRAW
             glfw.pollEvents();
