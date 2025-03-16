@@ -11,11 +11,8 @@ pub fn main() !void {
     var app = try engine.Application.init(allocator, .{
         .title = "ZARMAT",
         .window = .{
+            .color = .{ 0.5, 0.5, 0.5, 1.0 },
             .size = .{
-                .initial = .{
-                    .width = 800,
-                    .height = 600,
-                },
                 .limits = .{
                     .min_w = 400,
                     .max_w = -1,

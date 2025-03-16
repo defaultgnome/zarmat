@@ -1,3 +1,5 @@
+//! This is the main abstraction over GLFW, and OpenGL initilization
+//! Responsible for running the game loop, tracking the time, and getting the inputs
 const std = @import("std");
 const builtin = @import("builtin");
 const glfw = @import("zglfw");
@@ -10,6 +12,7 @@ const zstbi = @import("zstbi");
 pub const Application = struct {
     state: State,
     window: *glfw.Window,
+    clear_color: zm.Vec,
     const Self = @This();
 
     const State = struct {
@@ -95,34 +98,38 @@ pub const Application = struct {
                 },
             },
             .window = window,
+            .clear_color = config.window.color,
         };
     }
     const ApplicationConfig = struct {
-        title: [:0]const u8,
-        window: WindowOptions,
+        title: [:0]const u8 = "",
+        window: WindowOptions = .{},
     };
     const WindowOptions = struct {
-        size: SizeOptions,
-        input: InputOptions,
+        size: SizeOptions = .{},
+        input: InputOptions = .{},
+        color: zm.Vec = .{ 0, 0, 0, 1.0 },
     };
     const SizeOptions = struct {
-        initial: InitialSizeOptions,
-        limits: LimitsOptions,
+        initial: InitialSizeOptions = .{},
+        limits: LimitsOptions = .{},
     };
     const InitialSizeOptions = struct {
-        width: c_int,
-        height: c_int,
+        width: c_int = 600,
+        height: c_int = 800,
     };
     const LimitsOptions = struct {
-        min_w: c_int,
-        max_w: c_int,
-        min_h: c_int,
-        max_h: c_int,
+        min_w: c_int = -1,
+        max_w: c_int = -1,
+        min_h: c_int = -1,
+        max_h: c_int = -1,
     };
     const InputOptions = struct {
-        cursor: glfw.Cursor.Mode,
+        cursor: glfw.Cursor.Mode = .normal,
     };
 
+    /// This exist just because i needed to call `setUserPointer` and pass it
+    /// this struct instance
     pub fn initCallbacks(self: *Self) void {
         const window = self.window;
         glfw.makeContextCurrent(window);
@@ -156,7 +163,12 @@ pub const Application = struct {
             glfw.pollEvents();
 
             { // Clear
-                gl.clearColor(0.2, 0.3, 0.3, 1.0);
+                gl.clearColor(
+                    self.clear_color[0],
+                    self.clear_color[1],
+                    self.clear_color[2],
+                    self.clear_color[3],
+                );
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             }
 
