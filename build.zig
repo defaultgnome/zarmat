@@ -27,6 +27,7 @@ pub fn build(b: *std.Build) void {
         .name = "zarmat",
         .root_module = exe_mod,
     });
+    configGameDevDeps(b, exe, target);
     b.installArtifact(exe);
 
     // RUN

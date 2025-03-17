@@ -1,5 +1,10 @@
 const std = @import("std");
 const engine = @import("engine");
+const glfw = @import("zglfw");
+const zopengl = @import("zopengl");
+const gl = zopengl.bindings;
+const zgui = @import("zgui");
+const zm = @import("zmath");
 
 pub fn main() !void {
     // Allocators
@@ -10,40 +15,91 @@ pub fn main() !void {
     // Game Init
     var app = try engine.Application.init(allocator, .{
         .title = "ZARMAT",
-        .window = .{
-            .color = .{ 0.5, 0.5, 0.5, 1.0 },
-            .size = .{
-                .limits = .{
-                    .min_w = 400,
-                    .max_w = -1,
-                    .min_h = 600,
-                    .max_h = -1,
-                },
-            },
-            .input = .{
-                .cursor = .normal,
-            },
-        },
     });
     defer app.deinit();
-    app.initCallbacks();
+    _ = app.window.setCursorPosCallback(mouseCallback);
 
-    var game_state = GameState{ .cube_pos = engine.Vec2.identity() };
-
-    // TODO: i don't like this way of plugining function to the "mainframe"
-    // i want a more open way, maybe working with the window, and setting the event and loop ourself?
-    // just calling some 'app.start()' and 'app.end()' function each frame?
-    app.onUpdate(update, @ptrCast(&game_state));
     // TODO: create a Sprite and render it
-    try app.run();
-}
 
-fn update(app: *engine.Application, user_data: *anyopaque) void {
-    const delta_time = app.state.delta_time;
-    const game_state: *GameState = @ptrCast(@alignCast(user_data));
-    game_state.cube_pos.x += 1 * delta_time;
+    while (!app.window.shouldClose()) {
+        //---UPDATE
+        { // Update Time State
+            const current_frame = @as(f32, @floatCast(glfw.getTime()));
+            state.delta_time = current_frame - state.last_frame;
+            state.last_frame = current_frame;
+        }
+        processInput(app.window);
+        // UPDATE LOGIC HERE
+
+        //---DRAW
+        glfw.pollEvents();
+
+        { // Clear
+            gl.clearColor(0.5, 0.5, 0.5, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        }
+
+        {
+            // RENDER HERE OPENGL
+        }
+
+        { // zgui
+            const framebuffer_size = app.window.getFramebufferSize();
+
+            zgui.backend.newFrame(@intCast(framebuffer_size[0]), @intCast(framebuffer_size[1]));
+
+            // RENDER HERE UI
+
+            zgui.backend.draw();
+
+            { // Enable Multi-Viewports
+                const ctx = glfw.getCurrentContext();
+                zgui.updatePlatformWindows();
+                zgui.renderPlatformWindowsDefault();
+                glfw.makeContextCurrent(ctx);
+            }
+        }
+
+        app.window.swapBuffers();
+    }
 }
 
 const GameState = struct {
     cube_pos: engine.Vec2,
+    delta_time: f32 = 0,
+    last_frame: f32 = 0,
+    mouse: struct {
+        did_init: bool = false,
+        last_x: f32 = 0,
+        last_y: f32 = 0,
+    },
 };
+
+var state = GameState{
+    .cube_pos = engine.Vec2.identity(),
+    .mouse = .{},
+};
+
+fn processInput(window: *glfw.Window) callconv(.c) void {
+    if (window.getKey(.escape) == .press) {
+        window.setShouldClose(true);
+    }
+}
+
+fn mouseCallback(window: *glfw.Window, xpos: f64, ypos: f64) callconv(.c) void {
+    _ = window;
+    const pos_x: f32 = @floatCast(xpos);
+    const pos_y: f32 = @floatCast(ypos);
+
+    // Without this the mouse jump on first event
+    if (state.mouse.did_init == false) {
+        state.mouse.last_x = pos_x;
+        state.mouse.last_y = pos_y;
+        state.mouse.did_init = true;
+    }
+
+    // const offset_x = pos_x - state.mouse.last_x;
+    // const offset_y = state.mouse.last_y - pos_y;
+    state.mouse.last_x = pos_x;
+    state.mouse.last_y = pos_y;
+}
