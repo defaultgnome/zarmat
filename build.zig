@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
     });
     const lib = b.addLibrary(.{
         .linkage = .static,
-        .name = "delme",
+        .name = "engine",
         .root_module = lib_mod,
     });
     configGameDevDeps(b, lib, target);
