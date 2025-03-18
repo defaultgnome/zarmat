@@ -43,3 +43,7 @@ Here are the challenges I'm tackling along the way:
   - Highlighting pieces/rows/cols for better visibility.
 - **Build System**:
   - Using zgui only for debug builds to streamline the process.
+
+## Assets
+
+The Chess Assets come from [WildLifeStudios](https://wildlifestudios.itch.io/chess-set-pixel-art)

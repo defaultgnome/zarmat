@@ -5,6 +5,8 @@ const zopengl = @import("zopengl");
 const gl = zopengl.bindings;
 const zgui = @import("zgui");
 const zm = @import("zmath");
+const Application = engine.Application;
+const Sprite = engine.renderer.Sprite;
 
 pub fn main() !void {
     // Allocators
@@ -13,13 +15,18 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // Game Init
-    var app = try engine.Application.init(allocator, .{
+    var app = try Application.init(allocator, .{
         .title = "ZARMAT",
     });
     defer app.deinit();
     _ = app.window.setCursorPosCallback(mouseCallback);
 
-    // TODO: create a Sprite and render it
+    // Initialize the board sprite
+    var pawn = try Sprite.init(
+        allocator,
+        "./assets/sprites/pieces/pawn_black.png",
+    );
+    defer pawn.deinit();
 
     while (!app.window.shouldClose()) {
         //---UPDATE
@@ -41,6 +48,7 @@ pub fn main() !void {
 
         {
             // RENDER HERE OPENGL
+            pawn.render();
         }
 
         { // zgui
@@ -60,12 +68,14 @@ pub fn main() !void {
             }
         }
 
+        // Catch all incase we forgot
+        engine.renderer.glLogErrors(@src());
+
         app.window.swapBuffers();
     }
 }
 
 const GameState = struct {
-    cube_pos: engine.Vec2,
     delta_time: f32 = 0,
     last_frame: f32 = 0,
     mouse: struct {
@@ -76,13 +86,14 @@ const GameState = struct {
 };
 
 var state = GameState{
-    .cube_pos = engine.Vec2.identity(),
     .mouse = .{},
 };
 
 fn processInput(window: *glfw.Window) callconv(.c) void {
-    if (window.getKey(.escape) == .press) {
-        window.setShouldClose(true);
+    if (window.getKey(.left_control) == .press) {
+        if (window.getKey(.q) == .press) {
+            window.setShouldClose(true);
+        }
     }
 }
 
