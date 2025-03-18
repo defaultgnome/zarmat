@@ -8,6 +8,7 @@ const zm = @import("zmath");
 const zopengl = @import("zopengl");
 const gl = zopengl.bindings;
 const zstbi = @import("zstbi");
+const renderer = @import("renderer/renderer.zig");
 
 pub const Application = struct {
     window: *glfw.Window,
@@ -113,6 +114,21 @@ pub const Application = struct {
         zgui.deinit();
         self.window.destroy();
         glfw.terminate();
+    }
+
+    pub fn stillRunning(self: Self) bool {
+        return !self.window.shouldClose();
+    }
+
+    pub fn framestart(self: Self) void {
+        _ = self;
+        glfw.pollEvents();
+    }
+
+    pub fn frameend(self: Self) void {
+        // Catch all incase we forgot
+        renderer.glLogErrors(@src());
+        self.window.swapBuffers();
     }
 };
 

@@ -28,9 +28,13 @@ pub fn main() !void {
     );
     defer pawn.deinit();
 
-    while (!app.window.shouldClose()) {
+    while (app.stillRunning()) {
+        app.framestart();
+        defer app.frameend();
+
         //---UPDATE
         { // Update Time State
+            // TODO: probably move into the application and use app.deltaTime() app.lastFrame()
             const current_frame = @as(f32, @floatCast(glfw.getTime()));
             state.delta_time = current_frame - state.last_frame;
             state.last_frame = current_frame;
@@ -39,7 +43,6 @@ pub fn main() !void {
         // UPDATE LOGIC HERE
 
         //---DRAW
-        glfw.pollEvents();
 
         { // Clear
             gl.clearColor(0.5, 0.5, 0.5, 1);
@@ -67,11 +70,6 @@ pub fn main() !void {
                 glfw.makeContextCurrent(ctx);
             }
         }
-
-        // Catch all incase we forgot
-        engine.renderer.glLogErrors(@src());
-
-        app.window.swapBuffers();
     }
 }
 
