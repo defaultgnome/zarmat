@@ -15,9 +15,12 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // Game Init
-    var app = try Application.init(allocator, .{
-        .title = "ZARMAT",
-    });
+    var app = try Application.init(
+        allocator,
+        .{
+            .title = "ZARMAT",
+        },
+    );
     defer app.deinit();
     _ = app.window.setCursorPosCallback(mouseCallback);
 
@@ -33,12 +36,6 @@ pub fn main() !void {
         defer app.frameend();
 
         //---UPDATE
-        { // Update Time State
-            // TODO: probably move into the application and use app.deltaTime() app.lastFrame()
-            const current_frame = @as(f32, @floatCast(glfw.getTime()));
-            state.delta_time = current_frame - state.last_frame;
-            state.last_frame = current_frame;
-        }
         processInput(app.window);
         // UPDATE LOGIC HERE
 
@@ -74,8 +71,6 @@ pub fn main() !void {
 }
 
 const GameState = struct {
-    delta_time: f32 = 0,
-    last_frame: f32 = 0,
     mouse: struct {
         did_init: bool = false,
         last_x: f32 = 0,

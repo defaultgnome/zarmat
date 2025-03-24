@@ -12,6 +12,8 @@ const renderer = @import("renderer/renderer.zig");
 
 pub const Application = struct {
     window: *glfw.Window,
+    delta_time: f32 = 0,
+    time: f32,
 
     const Self = @This();
 
@@ -80,6 +82,7 @@ pub const Application = struct {
         glfw.swapInterval(1);
         return .{
             .window = window,
+            .time = @as(f32, @floatCast(glfw.getTime())),
         };
     }
     const ApplicationConfig = struct {
@@ -120,8 +123,10 @@ pub const Application = struct {
         return !self.window.shouldClose();
     }
 
-    pub fn framestart(self: Self) void {
-        _ = self;
+    pub fn framestart(self: *Self) void {
+        const now = @as(f32, @floatCast(glfw.getTime()));
+        self.delta_time = now - self.time;
+        self.time = now;
         glfw.pollEvents();
     }
 
