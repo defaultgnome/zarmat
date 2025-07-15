@@ -1,109 +1,84 @@
 const std = @import("std");
-const engine = @import("engine");
-const glfw = @import("zglfw");
-const zopengl = @import("zopengl");
-const gl = zopengl.bindings;
-const zgui = @import("zgui");
-const zm = @import("zmath");
-const Application = engine.Application;
-const Sprite = engine.renderer.Sprite;
+const sokol = @import("sokol");
+const shd = @import("shader");
+const sg = sokol.gfx;
+const sapp = sokol.app;
+const sglue = sokol.glue;
+const slog = sokol.log;
+
+const State = struct {
+    gfx: struct {
+        pipeline: sg.Pipeline = .{},
+        bindings: sg.Bindings = .{},
+        pass_action: sg.PassAction = .{},
+    } = .{},
+};
+var state: State = .{};
 
 pub fn main() !void {
-    // Allocators
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(gpa.deinit() == .ok);
-    const allocator = gpa.allocator();
-
-    // Game Init
-    var app = try Application.init(
-        allocator,
-        .{
-            .title = "ZARMAT",
+    sapp.run(.{
+        .init_cb = init,
+        .frame_cb = frame,
+        .event_cb = input,
+        .cleanup_cb = cleanup,
+        .width = 640,
+        .height = 480,
+        .window_title = "zarmat",
+        .icon = .{
+            .sokol_default = true,
         },
-    );
-    defer app.deinit();
-    _ = app.window.setCursorPosCallback(mouseCallback);
-
-    // Initialize the board sprite
-    var pawn = try Sprite.init(
-        allocator,
-        "./assets/sprites/pieces/pawn_black.png",
-    );
-    defer pawn.deinit();
-
-    while (app.stillRunning()) {
-        app.framestart();
-        defer app.frameend();
-
-        //---UPDATE
-        processInput(app.window);
-        // UPDATE LOGIC HERE
-
-        //---DRAW
-
-        { // Clear
-            gl.clearColor(0.5, 0.5, 0.5, 1);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        }
-
-        {
-            // RENDER HERE OPENGL
-            pawn.render();
-        }
-
-        { // zgui
-            const framebuffer_size = app.window.getFramebufferSize();
-
-            zgui.backend.newFrame(@intCast(framebuffer_size[0]), @intCast(framebuffer_size[1]));
-
-            // RENDER HERE UI
-
-            zgui.backend.draw();
-
-            { // Enable Multi-Viewports
-                const ctx = glfw.getCurrentContext();
-                zgui.updatePlatformWindows();
-                zgui.renderPlatformWindowsDefault();
-                glfw.makeContextCurrent(ctx);
-            }
-        }
-    }
+        .logger = .{ .func = slog.func },
+    });
 }
 
-const GameState = struct {
-    mouse: struct {
-        did_init: bool = false,
-        last_x: f32 = 0,
-        last_y: f32 = 0,
-    },
-};
+export fn init() void {
+    sg.setup(.{
+        .environment = sglue.environment(),
+        .logger = .{ .func = slog.func },
+    });
 
-var state = GameState{
-    .mouse = .{},
-};
+    // zig fmt: off
+    const vertices = [_]f32{
+         0.0,  0.5, 0.5,     1.0, 0.0, 0.0, 1.0,
+         0.5, -0.5, 0.5,     0.0, 1.0, 0.0, 1.0,
+        -0.5, -0.5, 0.5,     0.0, 0.0, 1.0, 1.0
+    };
+    // zig fmt: on
+    state.gfx.bindings.vertex_buffers[0] = sg.makeBuffer(.{
+        .data = sg.asRange(&vertices),
+    });
 
-fn processInput(window: *glfw.Window) callconv(.c) void {
-    if (window.getKey(.left_control) == .press) {
-        if (window.getKey(.q) == .press) {
-            window.setShouldClose(true);
-        }
+    {
+        var pip_desc: sg.PipelineDesc = .{
+            .shader = sg.makeShader(shd.displayShaderDesc(sg.queryBackend())),
+        };
+        pip_desc.layout.attrs[shd.ATTR_display_position].format = .FLOAT3;
+        pip_desc.layout.attrs[shd.ATTR_display_color0].format = .FLOAT4;
+        state.gfx.pipeline = sg.makePipeline(pip_desc);
     }
+
+    state.gfx.pass_action.colors[0] = sg.ColorAttachmentAction{
+        .load_action = .CLEAR,
+        .clear_value = .{ .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 },
+    };
 }
 
-fn mouseCallback(window: *glfw.Window, xpos: f64, ypos: f64) callconv(.c) void {
-    _ = window;
-    const pos_x: f32 = @floatCast(xpos);
-    const pos_y: f32 = @floatCast(ypos);
+export fn frame() void {
+    sg.beginPass(.{
+        .action = state.gfx.pass_action,
+        .swapchain = sglue.swapchain(),
+    });
+    sg.applyPipeline(state.gfx.pipeline);
+    sg.applyBindings(state.gfx.bindings);
+    sg.draw(0, 3, 1);
+    sg.endPass();
+    sg.commit();
+}
 
-    // Without this the mouse jump on first event
-    if (state.mouse.did_init == false) {
-        state.mouse.last_x = pos_x;
-        state.mouse.last_y = pos_y;
-        state.mouse.did_init = true;
-    }
+export fn input(ev: ?*const sapp.Event) void {
+    _ = ev;
+}
 
-    // const offset_x = pos_x - state.mouse.last_x;
-    // const offset_y = state.mouse.last_y - pos_y;
-    state.mouse.last_x = pos_x;
-    state.mouse.last_y = pos_y;
+export fn cleanup() void {
+    sg.shutdown();
 }
